@@ -1,0 +1,30 @@
+name: Send SMS Alert
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  send-sms:
+    if: startsWith(github.event.issue.title, '[SMS]')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send SMS through AlQahtani bridge
+        env:
+          SMS_BRIDGE_TOKEN: ${{ secrets.SMS_BRIDGE_TOKEN }}
+          MESSAGE: ${{ github.event.issue.body }}
+          BRIDGE_URL: https://alqahtani-ye.com:8443/hosted/chatgpt_sms_bridge.py/news_alert
+
+        run: |
+          jq -n --arg message "$MESSAGE" '{message:$message}' > payload.json
+
+          curl --fail-with-body -X POST \
+            -H "Authorization: Bearer $SMS_BRIDGE_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data @payload.json \
+            "$BRIDGE_URL"
